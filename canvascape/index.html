@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta name="author" content="Ben Joffe">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0, user-scalable=no">
+    <meta http-equiv="cleartype" content="on">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Ben Joffe | Canvascape: Textures</title>
+    <link rel="stylesheet" type="text/css" href="./style/main.css">
+    <script src="./script/jquery.min.js"></script>
+    <script type="text/javascript" src="./script/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="./style/textures.css">
+    <script src="./script/textures.js"></script>
+</head>
+
+<body>
+    <div id="benjoffe">
+        <div id="benjoffe-inner">
+            <h1>Ben Joffe</h1>
+            <div id="content">
+
+                <h2>Canvascape - "Experimenting With Textures"</h2>
+
+                <div id="app">
+                    <canvas id="underMap" width="106" height="102"></canvas>
+                    <canvas id="map" width="106" height="102"></canvas>
+                    <div id="holder" style="clear:both;">
+                        <div id="sky" style="background-position: -2003px 0px;"></div>
+                        <div id="floor"></div>
+                        <canvas id="canvas" width="400" height="300"></canvas>
+                        <div id="overlay" style="background-position: 9.89228px 9.72646px;"></div>
+                    </div>
+
+                    <div id="suppl">
+                        <p>Resolution:
+                            <select id="hilow">
+                                <option>Lower</option>
+                                <option>Low</option>
+                                <option selected="">Medium</option>
+                                <option>High</option>
+                            </select>
+                            <input type="button" onclick="changeResolution()" value="Apply">
+                        </p>
+                        <p>Use the arrow keys to walk around the map. Space bar = jump.</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <div id="foot">
+                <p>© 2016 Ben Joffe</p>
+            </div>
+        </div>
+    </div>
+</body>
+<div></div>
+<div></div>
+
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+	<title>未命名</title>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+	<meta name="generator" content="Geany 0.19.1" />
+	<!--<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script> -->
+	 <script type="text/javascript" src="jquery-2.0.3.js"></script>
+	<script type="text/javascript">
+	$(function() {
+		var ctx = document.getElementById('myCanvas').getContext('2d');
+		var canvasWidth = document.getElementById('myCanvas').clientWidth;
+		var canvasHeight = document.getElementById('myCanvas').clientHeight;
+		var boxCount = 5; // the theoritcal range is [1, 100]
+		var boxes = new Array();
+		var gridRow = 100;
+		var gridColumn = 100;
+		var xRatio = canvasWidth / gridRow;
+		var yRatio = canvasHeight / gridColumn;
+		var rRatio = Math.min(xRatio, yRatio);
+		var maxOccupation = 10 / ((boxCount + 9) / 10);
+		var maxVelocity = 20;
+		var interval = 30;
+		var timeSlice = 0.1;
+		var inaccuracy = 0.1;
+		var MAX = 9999;
+		var CollisionType = {
+			none:1,
+			box:2,
+			top:4,
+			right:8,
+			bottom:16,
+			left:32
+		};
+		var intervalID;
+		
+		function initData() {
+			var v;
+			for (var i = 0; i < boxCount; i++) {
+				var info = {
+					posX: 0,
+					posY: 0,
+					radius: 0,
+					vX:0,
+					vY:0,
+					tag:false
+				};
+				var isTrue = false;
+				while (!isTrue) {
+					info.posX = Math.floor(Math.random() * gridRow);
+					info.posY = Math.floor(Math.random() * gridColumn);
+					info.radius = Math.floor(Math.random() * maxOccupation);
+					info.radius = Math.max(6, info.radius);
+					// Checks whether there are overlap among the boxes.
+					if (boxes.length > 0) {
+						$.each(boxes, function(index, valueOfElement) {
+							if (Math.pow(valueOfElement.posX - info.posX, 2) + Math.pow(valueOfElement.posY - info.posY, 2) > 
+								Math.pow(valueOfElement.radius + info.radius, 2)) {
+									isTrue = true;
+									return false;
+							}
+							return true;
+						});
+					} else if ((Math.abs(info.posX) > info.radius) && (Math.abs(info.posY) > info.radius)){
+						isTrue = true;
+					}
+				}
+				info.posX = info.posX * xRatio;
+				info.posY = info.posY * yRatio;
+				info.radius = info.radius * rRatio;
+				info.vX = Math.random() * maxVelocity * xRatio * ((Math.random() > 0.5) ? -1 : 1);
+				info.vY = Math.random() * maxVelocity * yRatio * ((Math.random() > 0.5) ? -1 : 1);
+				boxes[i] = info;
+			}
+		}
+		
+		function draw() {
+			ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+			$.each(boxes, function(index, value) {
+				ctx.beginPath();
+				ctx.arc(value.posX, value.posY, value.radius, 0, 2 * Math.PI);
+				ctx.fill();
+			});
+		}
+		
+		function computeF(a, b, c, x) {
+			return (a * Math.pow(x, 2) + b * x + c);
+		}
+		
+		function collisionTime(a, b, c) {
+			var fslice = computeF(a, b, c, timeSlice);
+			var isX0 = false;
+			if (fslice >= 0) {
+				var symmetryAxisX = (-1) * (b) / (2 * a);
+				if (symmetryAxisX > 0 && symmetryAxisX <= timeSlice) {
+					var fSymmetryAxisX = computeF(a, b, c, symmetryAxisX);
+					if (fSymmetryAxisX <= 0) {
+						isX0 = true;
+					}
+				}
+			} else {
+				isX0 = true;
+			}
+			if (isX0) {
+				return {x0: (((-1) * b) - Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a),
+							  type: CollisionType.box};
+			} else {
+				return {x0:timeSlice,
+							  type:CollisionType.none};
+			}
+		}
+		
+		function getNearestCollisionTime(box1, box2) {
+			return collisionTime(Math.pow(box1.vX - box2.vX, 2) + Math.pow(box1.vY - box2.vY, 2),
+			2 * ((box1.posX - box2.posX) * (box1.vX - box2.vX) + (box1.posY - box2.posY) * (box1.vY - box2.vY)),
+			Math.pow(box1.posX - box2.posX, 2) + Math.pow(box1.posY - box2.posY, 2) - Math.pow(box1.radius + box2.radius, 2));
+		}
+		
+		function loop() {
+			// Computes the next collision withine the time slice;
+			// If no collision occurs, then the box will continue moving during the whole time slice;
+			var collisionSet = new Array();
+			var timeCollapsed = MAX;
+			for (var i = 0; i < boxCount; i++) {
+				var res;
+				var minRes;
+				var minJ = new Array();
+				boxes[i].tag = false;
+				var toX, toY, typeX, typeY, to, type;
+				if (boxes[i].vX < 0) {
+					toX = (boxes[i].posX - boxes[i].radius) / ((-1) * boxes[i].vX);
+					typeX = CollisionType.left;
+				} else {
+					toX = (canvasWidth - boxes[i].posX - boxes[i].radius) / boxes[i].vX;
+					typeX = CollisionType.right;
+				}
+				if (boxes[i].vY < 0) {
+					toY = (boxes[i].posY - boxes[i].radius) / ((-1) * boxes[i].vY);
+					typeY = CollisionType.top;
+				} else {
+					toY = (canvasHeight - boxes[i].posY - boxes[i].radius) / boxes[i].vY;
+					typeY = CollisionType.bottom;
+				}
+				
+				if (toX > toY) {
+					to = toY;
+					type = typeY;
+				} else if (toX == toY) {
+					to = toX;
+					type = (typeX | typeY);
+				} else {
+					to = toX;
+					type = typeX;
+				}
+				
+				minRes = {x0:to, type:type};
+				if (minRes.x0 > timeSlice) {
+					minRes = {x0:timeSlice, type: CollisionType.none};
+				}
+				
+				for (var j = i+1; j < boxCount; j++) {
+					res =  getNearestCollisionTime(boxes[i], boxes[j]);
+					if (res.x0 == minRes.x0) {
+						if ((res.type & CollisionType.box) == CollisionType.box) {
+							minRes.type |= res.type;
+							minJ.push(j);
+						}
+					} else if (res.x0 < minRes.x0) {
+						minRes = res;
+						minJ = new Array();
+						minJ.push(j);
+					}
+				}
+				for (var m = 0; m < minJ.length; m++) {
+					var isFound = false;
+					for (var k = 0; k < collisionSet.length; k++) {
+						if (collisionSet[k].indexOf('['+i+']') >= 0) {
+							collisionSet[k] = collisionSet[k].concat(',['+minJ[m]+']');
+							isFound = true;
+						} else if (collisionSet[k].indexOf('['+minJ[m]+']') >= 0) {
+							collisionSet[k] = collisionSet[k].concat(',['+i+']');
+							isFound = true;
+						}
+					}
+					if (!isFound) {
+						collisionSet.push('['+i+'],'+'['+minJ[m]+']');
+					}
+				}
+				
+				timeCollapsed = Math.min(timeCollapsed, minRes.x0);
+				collisionSet['['+i+']'] = minRes.type;
+			}
+			
+			// Updates the position
+			for (var i = 0; i < boxCount; i++) {
+				boxes[i].posX += boxes[i].vX * timeCollapsed;
+				boxes[i].posY += boxes[i].vY * timeCollapsed;
+			}
+			// Updates the velocity
+			for (var prop in collisionSet) {
+				if (prop.match(/\[\d+\]/g)) {
+					var index = parseInt(prop.split('[')[1].split(']')[0], 10);
+					if (((collisionSet[prop] & CollisionType.top) == CollisionType.top) || 
+						 ((collisionSet[prop] & CollisionType.bottom) == CollisionType.bottom)) {
+						boxes[index].vY *= -1;
+					}
+					if (((collisionSet[prop] & CollisionType.left) == CollisionType.left) ||
+						  ((collisionSet[prop] & CollisionType.right) == CollisionType.right)) {
+						boxes[index].vX *= -1;
+					}
+				}
+			}
+			
+			for (var i = 0; i < collisionSet.length; i++) {
+				var items = collisionSet[i].split(',');
+				if (items.length == 2) {
+					var index1 = parseInt(items[0].split('[')[1].split(']')[0], 10);
+					var index2 = parseInt(items[1].split('[')[1].split(']')[0], 10);
+					var b1 = boxes[index1];
+					var b2 = boxes[index2];
+					var a = (b2.radius * b2.radius) / (b1.radius * b1.radius) ,
+						b = (b1.posY - b2.posY) / (b1.posX - b2.posX) ,
+						c = 2*( (b1.vX - b2.vX) +b* ( b1.vY - b2.vY ) )/((1+b*b)*(1+a));
+						b2.vX += c;
+						b2.vY += c*b;
+						b1.vX -= c*a;
+						b1.vY -= c*a*b; 
+				} else {
+					if (intervalID > 0) {
+						clearInterval(intervalID);
+						intervalID = 0;
+					}
+					alert("We couldn't handle the situation when more than two balls collide. Please refresh the page!");
+				}
+				// var finalVx = 0, finalVy = 0, totalRadius = 0, j, partial;
+				// for (j = 0; j < items.length; j++) {
+				// 	var index = parseInt(items[j].split('[')[1].split(']')[0], 10);
+				// 	finalVx += boxes[index].vX;
+				// 	finalVy += boxes[index].vY;
+				// 	totalRadius += boxes[index].radius;
+				// }
+				// for (j = 0; j < items.length; j++) {
+				// 	var index = parseInt(items[j].split('[')[1].split(']')[0], 10);
+				// 	partial = boxes[index].radius / totalRadius;
+				// 	boxes[index].vX = finalVx * partial;
+				// 	boxes[index].vY = finalVy * partial;
+				// }
+			}
+			
+			// draw all the boxes.
+			draw();
+		}
+		
+		initData();
+		draw();
+		intervalID = setInterval(loop, interval);
+	});
+	</script>
+	
+	<style type="text/css">
+	#myCanvas {
+		border:1px solid;
+	}
+	</style>
+</head>
+
+<body>
+	<canvas id="myCanvas"></canvas>
+</body>
+
+</html>
