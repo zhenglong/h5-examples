@@ -33,7 +33,7 @@
 
 		.values li {
 			display: inline-block;
-			width: 32%;
+			width: 24%;
 			text-align: center;
 		}
 		.values li:first-child {
@@ -59,8 +59,7 @@
 
 		.values li span:last-child {
 			font-size: 1.15rem;
-			display: inline-block;
-			max-width: 2.3rem;
+			display: block;
 			overflow: hidden;
 			vertical-align: middle;
 		}
@@ -135,23 +134,26 @@
 	<div id="output">
 		<ul class="values">
 			<li class="active">
-				<span>FPD30:&nbsp;</span><span id="fpd30Value">0</span>
+				<span>FPD30</span><span id="fpd30Value">0</span>
 			</li>
 			<li>
-				<span>SPD30:&nbsp;</span><span id="spd30Value">0</span>
+				<span>SPD30</span><span id="spd30Value">0</span>
 			</li>
 			<li>
-				<span>TPD30:&nbsp;</span><span id="tpd30Value">0</span>
+				<span>TPD30</span><span id="tpd30Value">0</span>
+			</li>
+			<li>
+				<span>总投入(%)</span><span id="totalInvestValue">0.00</span>
 			</li>
 		</ul>
 		<div id="commission">
-			0.00
+			0.00%
 		</div>
 	</div>
 	<div class="keys">
 		<table>
 			<tr class="params">
-				<td colspan="2">
+				<td>
 					<button type="button" id="fpd30" class="active">FPD30</button>
 				</td>
 				<td>
@@ -159,6 +161,9 @@
 				</td>
 				<td>
 					<button type="button" id="tpd30">TPD30</button>
+				</td>
+				<td>
+					<button type="button" id="totalInvest">总投入</button>
 				</td>
 			</tr>
 			<tr>
@@ -227,6 +232,10 @@
 			tpd30 : {
 				elem: document.getElementById('tpd30Value'),
 				defaultValue: 0
+			},
+			totalInvest: {
+				elem: document.getElementById('totalInvestValue'),
+				defaultValue: '0.00'
 			}
 		};
 		var commission = document.getElementById('commission');
@@ -238,6 +247,7 @@
 		var events = ['ontouchstart' in window ? 'touchstart' : 'click'];
 		var ls = window.localStorage;
 		var timeKey = '__commission_last_calc_time__';
+		var countKey = '__commission_count__';
 		function forEach(arr, cb) {
 			for (var i = 0; i < arr.length; i++) {
 				cb(arr[i]);
@@ -248,6 +258,14 @@
 		}
 		function toDecimal(arr) {
 			return arr.length ? parseFloat(inputs.join('')) : 0;
+		}
+		function toCharArr(decimal) {
+			var res = [];
+			if (!decimal) return res;
+			forEach(decimal + '', function(c) {
+				res.push(c);
+			});
+			return res;
 		}
 		function bindEvents(elem, handler) {
 			forEach(events, function(eventName) {
@@ -265,17 +283,20 @@
 			elem.className = elem.className + ' ' + clsName;
 		}
 		function setActiveParam(e) {
-			inputs = [];
 			if (cur) removeClass(cur, 'active');
 			cur = e.currentTarget;
 			addClass(cur, ' active');
 			curV = values[cur.id];
 			removeClass(document.querySelector('.values .active'), 'active');
 			addClass(curV.elem.parentNode, 'active');
+
+			inputs = toCharArr(getParam(cur.id));
+			hasDot = inputs.indexOf('.') > -1;
+
 			e.preventDefault();
 		}
 		function clearResult(e) {
-			commission.innerText = '0.00';
+			commission.innerText = '0.00%';
 			if (e) e.preventDefault();
 		}
 		function appendNumberBit(e) {
@@ -302,17 +323,26 @@
 			clearResult();
 			e.preventDefault();
 		}
+		var countLimit = 10;
 		function calc(e) {
-			if ((new Date()).valueOf() - ls.getItem(timeKey) < 600000) {
+			if (!ls.getItem(countKey)) {
+				ls.setItem(countKey, 0);
+			}
+			var totalCount = parseInt(ls.getItem(countKey), 10) % (countLimit + 2);
+			if ((totalCount > countLimit) && ((new Date()).valueOf() - ls.getItem(timeKey) < 600000)) {
 				alert('计算返佣率太频繁，请稍后重试！');
 				return;
 			}
+			if (totalCount > countLimit) totalCount = 0;
+			else totalCount++;
 			var a = getParam('fpd30');
 			var b = getParam('spd30');
 			var c = getParam('tpd30');
-			var cc = (247700 * 0.185 - (364800 * 0.63 * a + 364800 * 0.63 * b + 364800 * 0.63 * c - 304 * 100 * b - 304 * 100 * c * 2) / 100) / 247700;
-			commission.innerText = cc.toFixed(2);
+			var d = getParam('totalInvest') / 100;
+			var cc = (247700 * d - (364800 * 0.63 * a + 364800 * 0.63 * b + 364800 * 0.63 * c - 304 * 100 * b - 304 * 100 * c * 2) / 100) / 2477;
+			commission.innerText = cc.toFixed(2) + '%';
 			ls.setItem(timeKey, new Date().valueOf());
+			ls.setItem(countKey, totalCount);
 			e.preventDefault();
 		}
 		forEach(document.querySelectorAll('.params button'), function(btn) {
