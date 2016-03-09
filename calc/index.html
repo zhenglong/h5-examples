@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="content-type" content="text/html;charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<title>返佣计算器</title>
+	<style>
+		*,
+		html {
+			margin: 0;
+			padding: 0;
+			color:#444;
+			-moz-user-select:none;
+			-webkit-user-select:none;
+			-ms-user-select:none;
+			user-select:none;
+		}
+
+		html {
+			font-size: 14px;
+		}
+
+		body {
+			padding: .25rem;
+		}
+
+		.values {
+			list-style-type: none;
+			color:#888;
+		}
+
+		.values li {
+			display: inline-block;
+			width: 32%;
+			text-align: center;
+		}
+		.values li:first-child {
+			text-align: left;
+		}
+		.values li:last-child {
+			text-align: right;
+		}
+		.values li.active {
+			font-weight: bold;
+			color:inherit;
+		}
+		.values li.active span:first-child {
+			font-size: 1.1rem;
+		}
+		.values li.active span:last-child {
+			font-size: 1.35rem;
+		}
+		.values li span:first-child {
+			font-size: .9rem;
+			vertical-align: middle;
+		}
+
+		.values li span:last-child {
+			font-size: 1.15rem;
+			display: inline-block;
+			max-width: 2.3rem;
+			overflow: hidden;
+			vertical-align: middle;
+		}
+
+		#output {
+			height: 10rem;
+		}
+
+		table {
+			width: 100%;
+			border-spacing: none;
+			table-layout: fixed;
+		}
+
+		table,
+		td {
+			border-collapse: collapse;
+		}
+
+		td {
+			padding: .25rem;
+			position: relative;
+			overflow: hidden;
+		}
+		button {
+			display: block;
+			padding: .75rem;
+			font-size: 1rem;
+			border: 0;
+			width: 100%;
+			background-color: #ccc;
+		}
+
+		button.active {
+			background-color: #FFE342;
+			color:#88750A;
+			transition: all 150ms ease-in;
+		}
+
+		button:active {
+			background-color: #FFE342;
+			color:#88750A;
+			outline: 0;
+		}
+		button:focus {
+			outline: 0;
+		}
+		button::-moz-focus-inner {
+			border: 0;
+		}
+
+		#commission {
+			text-align: right;
+			font-size: 5rem;
+			margin: 1rem .5rem;
+		}
+
+		#calc {
+			position: absolute;
+			top: .25rem;
+			left:.25rem;
+			right:.25rem;
+			bottom:.25rem;
+		}
+		.decimal,#backspace, #clear {
+			font-size: 3rem;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="output">
+		<ul class="values">
+			<li class="active">
+				<span>FPD30:&nbsp;</span><span id="fpd30Value">0</span>
+			</li>
+			<li>
+				<span>SPD30:&nbsp;</span><span id="spd30Value">0</span>
+			</li>
+			<li>
+				<span>TPD30:&nbsp;</span><span id="tpd30Value">0</span>
+			</li>
+		</ul>
+		<div id="commission">
+			0.00
+		</div>
+	</div>
+	<div class="keys">
+		<table>
+			<tr class="params">
+				<td colspan="2">
+					<button type="button" id="fpd30" class="active">FPD30</button>
+				</td>
+				<td>
+					<button type="button" id="spd30">SPD30</button>
+				</td>
+				<td>
+					<button type="button" id="tpd30">TPD30</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button type="button" class="decimal">1</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">2</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">3</button>
+				</td>
+				<td>
+					<button type="button" id="backspace">&larr;</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button type="button" class="decimal">4</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">5</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">6</button>
+				</td>
+				<td>
+					<button type="button" id="clear">C</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button type="button" class="decimal">7</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">8</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">9</button>
+				</td>
+				<td rowspan="2">
+					<button type="button" id="calc">计算</button>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<button type="button" class="decimal">0</button>
+				</td>
+				<td>
+					<button type="button" class="decimal">.</button>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<script>
+	window.onload = function() {
+		var values = {
+			fpd30 : {
+				elem: document.getElementById('fpd30Value'),
+				defaultValue: 0
+			},
+			spd30 : {
+				elem: document.getElementById('spd30Value'),
+				defaultValue: 0
+			},
+			tpd30 : {
+				elem: document.getElementById('tpd30Value'),
+				defaultValue: 0
+			}
+		};
+		var commission = document.getElementById('commission');
+		var initSelectedParam = 'fpd30';
+		var cur = document.getElementById(initSelectedParam);
+		var curV = values[initSelectedParam];
+		var inputs = [];
+		var hasDot = false;
+		var events = ['ontouchstart' in window ? 'touchstart' : 'click'];
+		var ls = window.localStorage;
+		var timeKey = '__commission_last_calc_time__';
+		function forEach(arr, cb) {
+			for (var i = 0; i < arr.length; i++) {
+				cb(arr[i]);
+			}
+		}
+		function getParam(name) {
+			return parseFloat(values[name].elem.innerText);
+		}
+		function toDecimal(arr) {
+			return arr.length ? parseFloat(inputs.join('')) : 0;
+		}
+		function bindEvents(elem, handler) {
+			forEach(events, function(eventName) {
+				elem.addEventListener(eventName, handler);
+			});
+		}
+		function removeClass(elem, clsName) {
+			var arr = elem.className.split(' ');
+			arr.splice(arr.indexOf(clsName), 1);
+			elem.className = arr.join(' ');
+		}
+		function addClass(elem, clsName) {
+			var arr = elem.className.split(' ');
+			if (arr.indexOf(clsName) > -1) return;
+			elem.className = elem.className + ' ' + clsName;
+		}
+		function setActiveParam(e) {
+			inputs = [];
+			if (cur) removeClass(cur, 'active');
+			cur = e.currentTarget;
+			addClass(cur, ' active');
+			curV = values[cur.id];
+			removeClass(document.querySelector('.values .active'), 'active');
+			addClass(curV.elem.parentNode, 'active');
+			e.preventDefault();
+		}
+		function clearResult(e) {
+			commission.innerText = '0.00';
+			if (e) e.preventDefault();
+		}
+		function appendNumberBit(e) {
+			var txt = e.currentTarget.innerText;
+			if (txt == '.') {
+				if (hasDot || !inputs.length) return;
+				hasDot = true;
+			}
+			inputs.push(txt);
+			curV.elem.innerText = toDecimal(inputs);
+			clearResult();
+			e.preventDefault();
+		}
+		function unappendNumberBit(e) {
+			if (!inputs.length) return;
+			inputs.pop();
+			curV.elem.innerText = inputs.length ? toDecimal(inputs) : curV.defaultValue;
+			clearResult();
+			e.preventDefault();
+		}
+		function clearNumberBit(e) {
+			inputs = [];
+			curV.elem.innerText = curV.defaultValue;
+			clearResult();
+			e.preventDefault();
+		}
+		function calc(e) {
+			if ((new Date()).valueOf() - ls.getItem(timeKey) < 600000) {
+				alert('计算返佣率太频繁，请稍后重试！');
+				return;
+			}
+			var a = getParam('fpd30');
+			var b = getParam('spd30');
+			var c = getParam('tpd30');
+			var cc = (247700 * 0.185 - (364800 * 0.63 * a + 364800 * 0.63 * b + 364800 * 0.63 * c - 304 * 100 * b - 304 * 100 * c * 2) / 100) / 247700;
+			commission.innerText = cc.toFixed(2);
+			ls.setItem(timeKey, new Date().valueOf());
+			e.preventDefault();
+		}
+		forEach(document.querySelectorAll('.params button'), function(btn) {
+			bindEvents(btn, setActiveParam);
+		});
+		forEach(document.querySelectorAll('.decimal'), function(btn) {
+			bindEvents(btn, appendNumberBit);
+		});
+		bindEvents(document.getElementById('backspace'), unappendNumberBit);
+		bindEvents(document.getElementById('clear'), clearNumberBit);
+		bindEvents(document.getElementById('calc'), calc);
+	};
+	</script>
+</body>
+
+</html>
