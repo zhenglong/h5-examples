@@ -1,0 +1,71 @@
+.canvas-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+canvas {
+    transition: all linear 1s;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+.content {
+    position: relative;
+}
+.table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+.table>div {
+    display: table-row;
+}
+.table>div>div {
+    display: table-cell;
+    height: 62px;
+    width: 60px;
+    text-align: center;
+    vertical-align: middle;
+}
+.table>div>div:last-child {
+    text-align: left;
+    width: auto;
+    padding-left: 18px;
+}
+
+ul {
+    white-space: nowrap;
+    font-size: 0;
+    padding: 0 10px;
+    /* background-color: whitesmoke; */
+    position: relative;
+    top: 3px;
+}
+.hide {
+    visibility: hidden;
+}
+ul li {
+    display: inline-block;
+    width: 25%;
+}
+
+img {
+    display: inline-block;
+    max-width: 100%;
+    max-height: 100%;
+    position: relative;
+    top: 0px;
+}
+h6 {
+    font-size: 18px;
+    line-height: 24px;
+    height: 24px;
+    color: #333D48;
+}
+
+p {
+    color: #989CA3;
+    margin-top: 6px;
+    line-height: 16px;
+    font-size: 12px;
+}
